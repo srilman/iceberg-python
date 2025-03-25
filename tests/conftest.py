@@ -1142,6 +1142,40 @@ def metadata_location_gz(tmp_path_factory: pytest.TempPathFactory) -> str:
     return metadata_location
 
 
+@pytest.fixture(scope="session")
+def metadata_location_hint(tmp_path_factory: pytest.TempPathFactory) -> str:
+    from pyiceberg.io.pyarrow import PyArrowFileIO
+
+    io = PyArrowFileIO()
+    metadata = TableMetadataV2(**EXAMPLE_TABLE_METADATA_V2)
+    meta_folder = tmp_path_factory.mktemp("metadata")
+
+    metadata_location = str(meta_folder / "v1.metadata.json")
+    ToOutputFile.table_metadata(metadata, io.new_output(location=metadata_location), overwrite=True)
+
+    version_location = str(meta_folder / "version-hint.text")
+    with io.new_output(location=version_location).create() as output:
+        output.write(b"1")
+    return version_location
+
+
+@pytest.fixture(scope="session")
+def metadata_location_gz_hint(tmp_path_factory: pytest.TempPathFactory) -> str:
+    from pyiceberg.io.pyarrow import PyArrowFileIO
+
+    io = PyArrowFileIO()
+    metadata = TableMetadataV2(**EXAMPLE_TABLE_METADATA_V2)
+    meta_folder = tmp_path_factory.mktemp("metadata")
+
+    metadata_location = str(meta_folder / "v1.gz.metadata.json")
+    ToOutputFile.table_metadata(metadata, io.new_output(location=metadata_location), overwrite=True)
+
+    version_location = str(meta_folder / "version-hint.text")
+    with io.new_output(location=version_location).create() as output:
+        output.write(b"1")
+    return version_location
+
+
 manifest_entry_records = [
     {
         "status": 1,

@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import itertools
+import os
 import uuid
 import warnings
 from abc import ABC, abstractmethod
@@ -1386,6 +1387,45 @@ class StaticTable(Table):
             metadata=metadata,
             io=load_file_io({**properties, **metadata.properties}),
             catalog=NoopCatalog("static-table"),
+        )
+
+    @classmethod
+    def from_version_hint(cls, version_hint_path: str, properties: Properties = EMPTY_DICT) -> StaticTable:
+        """
+        Load a table from a version hint file.
+
+        Some catalogs or engines keep a version hint file `version-hint.text`
+        in the table metadata directory that points to the latest table metadata file.
+        Note, this assumes that the version hint file is in the same directory as the metadata file.
+
+        Args:
+            version_hint_path: The path of the version hint file.
+            properties: The properties to use for the table.
+        Returns:
+            A read-only table
+        """
+        if os.path.basename(version_hint_path) != "version-hint.text":
+            warnings.warn(
+                "A version hint file is generally named 'version-hint.text'. "
+                f"File `{version_hint_path}` may not be a valid version hint file."
+            )
+
+        # Read the version hint file to get the latest metadata file
+        io = load_file_io(properties=properties, location=version_hint_path)
+        with io.new_input(version_hint_path).open(seekable=False) as f:
+            version_hint = int(f.read().strip().decode())
+
+        # Construct the metadata location from the version hint
+        metadata_folder = os.path.dirname(version_hint_path)
+        for metadata_loc in [
+            f"{metadata_folder}/v{version_hint}.metadata.json",
+            f"{metadata_folder}/v{version_hint}.gz.metadata.json",
+        ]:
+            if io.new_input(metadata_loc).exists():
+                return cls.from_metadata(metadata_loc, properties)
+
+        raise FileNotFoundError(
+            f"Version hint file `{version_hint_path}` points to version {version_hint}, but no metadata file found."
         )
 
 

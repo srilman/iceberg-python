@@ -32,7 +32,7 @@ from pyiceberg.expressions import (
     EqualTo,
     In,
 )
-from pyiceberg.io import PY_IO_IMPL, load_file_io
+from pyiceberg.io import load_file_io
 from pyiceberg.manifest import (
     DataFile,
     DataFileContent,
@@ -44,7 +44,6 @@ from pyiceberg.partitioning import PartitionField, PartitionSpec
 from pyiceberg.schema import Schema
 from pyiceberg.table import (
     CommitTableRequest,
-    StaticTable,
     Table,
     TableIdentifier,
     _match_deletes_to_data_file,
@@ -369,23 +368,6 @@ def test_table_scan_projection_unknown_column(table_v2: Table) -> None:
         _ = scan.select("a").projection()
 
     assert "Could not find column: 'a'" in str(exc_info.value)
-
-
-def test_static_table_same_as_table(table_v2: Table, metadata_location: str) -> None:
-    static_table = StaticTable.from_metadata(metadata_location)
-    assert isinstance(static_table, Table)
-    assert static_table.metadata == table_v2.metadata
-
-
-def test_static_table_gz_same_as_table(table_v2: Table, metadata_location_gz: str) -> None:
-    static_table = StaticTable.from_metadata(metadata_location_gz)
-    assert isinstance(static_table, Table)
-    assert static_table.metadata == table_v2.metadata
-
-
-def test_static_table_io_does_not_exist(metadata_location: str) -> None:
-    with pytest.raises(ValueError):
-        StaticTable.from_metadata(metadata_location, {PY_IO_IMPL: "pyiceberg.does.not.exist.FileIO"})
 
 
 def test_match_deletes_to_datafile() -> None:
